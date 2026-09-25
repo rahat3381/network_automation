@@ -1,0 +1,102 @@
+device:
+  host: "10.10.10.2"
+  username: "admin"
+  password: "cisco-automation123"
+  device_type: "cisco_ios"
+
+vlans:
+  - id: 10
+    name: "WEB_SERVERS"
+  - id: 20
+    name: "APP_SERVERS"
+
+stp:
+  mode: "rapid-pvst"
+  priority: 4096
+  vlan: "10,20"
+
+interfaces:
+  - name: "GigabitEthernet1/0/1"
+    mode: "access"
+    vlan: 10
+  - name: "GigabitEthernet1/0/2"
+    mode: "access"
+    vlan: 20
+  - name: "GigabitEthernet1/0/3"
+    mode: "trunk"
+    allowed_vlans: "10,20"
+  - name: "GigabitEthernet1/0/4"
+    mode: "trunk"
+    allowed_vlans: "10,20"
+
+etherchannel:
+  - id: 500
+    interfaces: ["GigabitEthernet1/0/3", "GigabitEthernet1/0/4"]
+    mode: "active"
+    protocol: "lacp"
+
+svi_hsrp:
+  - vlan: 10
+    ip: "192.168.10.2 255.255.255.0"
+    hsrp_group: 500
+    hsrp_ip: "192.168.10.1"
+    hsrp_priority: 110
+  - vlan: 20
+    ip: "192.168.20.2 255.255.255.0"
+    hsrp_group: 500
+    hsrp_ip: "192.168.20.1"
+    hsrp_priority: 110
+
+
+acls:
+  - name: "AUTOMATION-FILTER-LIST"
+    type: "extended"
+    rules:
+      - "permit tcp any any eq 80"
+      - "permit tcp any any eq 443"
+        "permit tcp any any eq 3389"
+        "permit tcp any any eq 3390"
+        "permit udp any any eq 3389"
+        "permit udp any any eq 3390"
+      - "deny ip any any"
+route_maps:
+  - name: "OSPF_TO_BGP"
+    action: "permit"
+    sequence: 10
+    match_ip_address: "AUTOMATION-FILTER-LIST"
+  - name: "BGP-LOCAL PREF"
+    action: "permit"
+    sequence: 10
+    set_local_preference: 200
+
+routing:
+  static:
+    - prefix: "0.0.0.0 0.0.0.0"
+      next_hop: "10.10.10.1"
+  ospf:
+    process_id: 500
+    networks:
+      - prefix: "192.168.10.0 0.0.0.255"
+        area: 0
+      - prefix: "192.168.20.0 0.0.0.255"
+        area: 0
+  eigrp:
+    as_number: 500
+    networks:
+      - prefix: "10.0.0.0 0.255.255.255"
+  bgp:
+    as_number: 65000
+    router_id: "10.10.10.2"
+    neighbors:
+      - ip: "10.10.10.5"
+        remote_as: 65001
+    networks:
+      - prefix: "192.168.10.0 mask 255.255.255.0"
+      - prefix: "192.168.20.0 mask 255.255.255.0"
+  isis:
+    process_tag: "CORE"
+    net: "49.0001.0000.0000.0002.00"
+    is_type: "level-2-only"
+    interfaces:
+      - "GigabitEthernet1/0/3"
+      - "GigabitEthernet1/0/4"
