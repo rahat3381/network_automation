@@ -87,9 +87,14 @@ routing:
   bgp:
     as_number: 65000
     router_id: "10.10.10.2"
+    redistribute:
+      - protocol: "ospf"
+        process_id: 500
+        route_map: "OSPF_TO_BGP"
     neighbors:
       - ip: "10.10.10.5"
         remote_as: 65001
+        route_map_in: "BGP_LOCAL_PREF"
     networks:
       - prefix: "192.168.10.0 mask 255.255.255.0"
       - prefix: "192.168.20.0 mask 255.255.255.0"
