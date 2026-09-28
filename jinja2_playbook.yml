@@ -1,0 +1,9 @@
+---
+- hosts: switches
+  gather_facts: false
+  become: true
+  tasks:
+    - include_vars: vars_jinja.yml
+    - cisco.ios.ios_config:
+        src: router_template_jinja.j2
+        save_when: modified

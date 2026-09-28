@@ -1,0 +1,154 @@
+- hosts: switches
+  gather_facts: false
+  become: true
+
+  tasks:
+    - cisco.ios.ios_config:
+        lines:
+          - spanning-tree mode rapid-pvst
+          - spanning-tree vlan 10,20 priority 4096
+
+    - cisco.ios.ios_config:
+        lines:
+          - name WEB_SERVERS
+        parents: vlan 10
+
+    - cisco.ios.ios_config:
+        lines:
+          - name APP_SERVERS
+        parents: vlan 20
+
+    - cisco.ios.ios_config:
+        lines:
+          - switchport mode access
+          - switchport nonegotiate
+          - switchport access vlan 10
+          - no shutdown
+        parents: interface GigabitEthernet1/0/1
+
+    - cisco.ios.ios_config:
+        lines:
+          - switchport mode access
+          - switchport nonegotiate
+          - switchport access vlan 20
+          - no shutdown
+        parents: interface GigabitEthernet1/0/2
+
+    - cisco.ios.ios_config:
+        lines:
+          - switchport mode trunk
+          - switchport nonegotiate
+          - switchport trunk allowed vlan 10,20
+          - channel-group 500 mode active
+          - ip router isis CORE
+          - no shutdown
+        parents: interface GigabitEthernet1/0/3
+
+    - cisco.ios.ios_config:
+        lines:
+          - switchport mode trunk
+          - switchport nonegotiate
+          - switchport trunk allowed vlan 10,20
+          - channel-group 500 mode active
+          - ip router isis CORE
+          - no shutdown
+        parents: interface GigabitEthernet1/0/4
+    
+    - cisco.ios.ios_config:
+        lines:
+          - switchport mode trunk
+          - switchport nonegotiate
+          - switchport trunk allowed vlan 10,20
+          - no shutdown
+        parents: interface Port-channel 500
+
+    - cisco.ios.ios_config:
+        lines:
+          - ip address 192.168.10.2 255.255.255.0
+          - standby version 2
+          - standby 500 ip 192.168.10.1
+          - standby 500 priority 110
+          - standby 500 preempt
+          - no shutdown
+        parents: interface Vlan10
+
+    - cisco.ios.ios_config:
+        lines:
+          - ip address 192.168.20.2 255.255.255.0
+          - standby version 2
+          - standby 500 ip 192.168.20.1
+          - standby 500 priority 110
+          - standby 500 preempt
+          - no shutdown
+        parents: interface Vlan20
+
+    - cisco.ios.ios_config:
+        lines:
+          - permit tcp any any eq 80
+          - permit tcp any any eq 443
+          - permit tcp any any eq 3389
+          - permit tcp any any eq 3390
+          - permit udp any any eq 3389
+          - permit udp any any eq 3390
+          - deny ip any any
+        parents: ip access-list extended AUTOMATION-FILTER-LIST
+
+    - cisco.ios.ios_config:
+        lines:
+          - match ip address AUTOMATION-FILTER-LIST
+        parents: route-map OSPF_TO_BGP permit 10
+
+    - cisco.ios.ios_config:
+        lines:
+          - exit
+        parents: route-map OSPF_TO_BGP permit 20
+
+    - cisco.ios.ios_config:
+        lines:
+          - match ip address AUTOMATION-FILTER-LIST
+          - set local-preference 200
+        parents: route-map BGP_LOCAL_PREF_IN permit 10
+
+    - cisco.ios.ios_config:
+        lines:
+          - exit
+        parents: route-map BGP_LOCAL_PREF_IN permit 20
+
+    - cisco.ios.ios_config:
+        lines:
+          - ip route 0.0.0.0 0.0.0.0 10.10.10.1
+
+    - cisco.ios.ios_config:
+        lines:
+          - router-id 10.10.10.2
+          - network 192.168.10.0 0.0.0.255 area 0
+          - network 192.168.20.0 0.0.0.255 area 0
+          - no shutdown
+        parents: router ospf 500
+
+    - cisco.ios.ios_config:
+        lines:
+          - eigrp router-id 10.10.10.2
+          - network 10.0.0.0 0.255.255.255
+          - no shutdown
+        parents: router eigrp 500
+
+    - cisco.ios.ios_config:
+        lines:
+          - bgp router-id 10.10.10.2
+          - neighbor 10.10.10.5 remote-as 65001
+          - neighbor 10.10.10.5 route-map BGP_LOCAL_PREF_IN in
+          - redistribute ospf 500 route-map OSPF_TO_BGP
+          - network 192.168.10.0 mask 255.255.255.0
+          - network 192.168.20.0 mask 255.255.255.0
+        parents: router bgp 65000
+
+    - cisco.ios.ios_config:
+        lines:
+          - net 49.0001.0000.0000.0002.00
+          - is-type level-2-only
+          - no shutdown
+        parents: router isis CORE
+
+    - cisco.ios.ios_config:
+        save_when: modified

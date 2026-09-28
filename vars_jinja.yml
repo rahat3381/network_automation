@@ -1,0 +1,33 @@
+---
+vlans:
+  - id: 10
+    name: "WEB_SERVERS"
+    ip: "192.168.10.2"
+    mask: "255.255.255.0"
+    network: "192.168.10.0"
+    hsrp_ip: "192.168.10.1"
+  - id: 20
+    name: "APP_SERVERS"
+    ip: "192.168.20.2"
+    mask: "255.255.255.0"
+    network: "192.168.20.0"
+    hsrp_ip: "192.168.20.1"
+
+access_interfaces:
+  - { name: "GigabitEthernet1/0/1", vlan: 10 }
+  - { name: "GigabitEthernet1/0/2", vlan: 20 }
+
+trunk_interfaces:
+  - "GigabitEthernet1/0/3"
+  - "GigabitEthernet1/0/4"
+
+allowed_vlans: "10,20"
+hsrp_group: 500
+hsrp_priority: 110
+ospf_process: 500
+eigrp_as: 500
+bgp_as: 65000
+bgp_neighbor: "10.10.10.5"
+bgp_remote_as: 65001
+router_id: "10.10.10.2"
+isis_net: "49.0001.0000.0000.0002.00"
